@@ -1,0 +1,71 @@
+version: "2.4"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.1
+    container_name: elasticsearch
+    hostname: elasticsearch
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: elasticsearch_data
+        target: /usr/share/elasticsearch/data
+    ports: 
+      - "9200:9200"
+    environment:
+      - "node.name=elasticsearch"
+      - "bootstrap.memory_lock=true"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "xpack.monitoring.enabled=true"
+      - "xpack.ml.enabled=false"
+      - "xpack.graph.enabled=false"
+      - "xpack.watcher.enabled=false"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+  filebeat:
+    build: filebeat
+    container_name: filebeat
+    hostname: mydockerhost
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=elasticsearch:9200
+    labels:
+      co.elastic.logs/enabled: "false"
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: /var/lib/docker
+        target: /var/lib/docker
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.1
+    container_name: kibana
+    restart: unless-stopped
+    environment:
+      - 'ELASTICSEARCH_HOSTS=["http://elasticsearch:9200"]'
+      - "SERVER_NAME=localhost"
+      - "XPACK_MONITORING_ENABLED=false"
+    ports:
+      - "5601:5601"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+volumes:
+  elasticsearch_data:
